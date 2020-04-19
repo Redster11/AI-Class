@@ -18,6 +18,10 @@ class Board
             Arrays.fill(this.board[i], '-'); 
         initialPlace();
     }
+    public char getItem(int x, int y)//current location of agent
+    {
+        return board[x][y];
+    }
     public boolean movePiece(int[] newLocation, char team) {
         if (this.board[newLocation[0]][newLocation[1]] != '#')
         {
@@ -112,6 +116,139 @@ class Moves
         return moves;
     }
 }
+
+class Agent
+{
+    boolean isTurn; // this is going to tell the agent if it is their turn
+    ArrayList<Integer[]> movesToMake = new ArrayList<Integer[]>(); // hold moves that can be made, so unoccupied spaces in directions agent can move
+    Board board;
+    Moves CompMovesMade;
+    Moves OppennetMovesMade;
+    public Agent(boolean isTurn, Board boardToUse, Moves Computer, Moves Opponent)
+    {
+        this.isTurn = isTurn;
+        this.board = boardToUse;
+        this.CompMovesMade = Computer;
+        this.OppennetMovesMade = Opponent;
+        movesToMake = getAvalibleMoves();
+
+    }
+    public ArrayList<Integer[]> getAvalibleMoves()
+    {
+        ArrayList<Integer[]> moveSet = new ArrayList<>();
+        int[] currentLoc;
+        if(isTurn)
+            currentLoc = this.board.teamX;
+        else
+            currentLoc = this.board.teamO;
+        // check down
+        for(int y = currentLoc[1]+1; y < 8; y++)
+        {
+            //check conflict
+            if(this.board.getItem(currentLoc[0], y) == '-')
+            {
+                moveSet.add(new Integer[]{currentLoc[0],y});
+            }
+            else
+                break;
+        }
+        //check up
+        for(int y = currentLoc[1]-1; y > 0; y--)
+        {
+            //check conflict
+            if(this.board.getItem(currentLoc[0], y) == '-')
+            {
+                moveSet.add(new Integer[]{currentLoc[0],y});
+            }
+            else
+                break;
+        }
+
+        //check right
+        for(int x = currentLoc[0]+1; x < 8; x++)
+        {
+            //check conflict
+           if(this.board.getItem(x, currentLoc[1]) == '-')
+            {
+                moveSet.add(new Integer[]{x,currentLoc[1]});
+            }
+            else
+                break;
+        }
+
+        //check left
+        for(int x = currentLoc[0]-1; x > 0; x--)
+        {
+            //check conflict
+            if(this.board.getItem(x, currentLoc[1]) == '-')
+            {
+                moveSet.add(new Integer[]{x,currentLoc[1]});
+            }
+            else
+                break;
+        }
+        //check up right
+        int x = currentLoc[0]+1;
+        int y = currentLoc[1]-1;
+        while(x < 8 && y > 0)
+        {
+            if(this.board.getItem(x, y) == '-')
+            {
+                moveSet.add(new Integer[]{x,y});           
+            }
+            else    
+                break;
+            x++;
+            y--;
+        }
+        //check up left
+        x = currentLoc[0]-1;
+        y = currentLoc[1]-1;
+        while(x > 0 && y > 0)
+        {
+            if(this.board.getItem(x, y) == '-')
+            {
+                moveSet.add(new Integer[]{x,y});           
+            }
+            else    
+                break;
+            x--;
+            y--;
+        }
+
+        //check down right
+        x = currentLoc[0]+1;
+        y = currentLoc[1]+1;
+        while( x < 8 && y < 8)
+        {
+            if(this.board.getItem(x, y) == '-')
+            {
+                moveSet.add(new Integer[]{x,y});
+            }
+            else 
+                break;
+            x++;
+            y++;
+        }
+
+        //check down left
+        x = currentLoc[0]-1;
+        y = currentLoc[1]+1;
+        while( x > 0 && y < 8)
+        {
+            if(this.board.getItem(x, y) == '-')
+            {
+                moveSet.add(new Integer[]{x,y});
+            }
+            else 
+                break;
+            x--;
+            y++;
+        }
+        return moveSet;   
+    }
+
+}
 public class Isolation
 {
     Board board = new Board(8);
@@ -125,8 +262,8 @@ public class Isolation
     G == 6
     H == 7
     */
-    static Moves Computer = new Moves();
-    static Moves Oppenent = new Moves();
+    static Moves ComputerMovesMade = new Moves();
+    static Moves OpponentMovesMade = new Moves();
 
     public static int[] getCoordinates(String Move, Boolean isXTurn)// from form D4 to numbers so should be 3,4
     {
@@ -141,9 +278,9 @@ public class Isolation
             // System.out.println("Did not fail is valid number: " + height + ", " +
             // length);
             if (isXTurn)
-                Computer.add(Move);
+                ComputerMovesMade.add(Move);
             else
-                Oppenent.add(Move);
+                OpponentMovesMade.add(Move);
 
             return new int[] {height-65, length - 1 };
         }
@@ -152,7 +289,8 @@ public class Isolation
     public static void main(String[] args) 
     {
         Isolation iso = new Isolation();
-        iso.board.printBoard(iso.Computer, iso.Oppenent);
+        Agent P = new Agent(true, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
+        iso.board.printBoard(iso.ComputerMovesMade, iso.OpponentMovesMade);
         boolean isTeamXTurn = true;
         Scanner kb = new Scanner(System.in);
         
@@ -172,7 +310,7 @@ public class Isolation
                         if (iso.board.movePiece(move, 'X'))
                         {
                             System.out.println("\nThe TeamX piece has been moved to: " + move[0] + ", " + (move[1] + 1));
-                            iso.board.printBoard(iso.Computer, iso.Oppenent);
+                            iso.board.printBoard(iso.ComputerMovesMade, iso.OpponentMovesMade);
                             gettingMove = false;
                             isTeamXTurn = false;
                         }
@@ -184,8 +322,6 @@ public class Isolation
                 }
                 
                 //Change them to a x y coordinate system
-                
-                
                 isTeamXTurn = false;
             }
             else
@@ -200,7 +336,7 @@ public class Isolation
                         if (iso.board.movePiece(move, 'O'))
                         {
                             System.out.println("\nThe TeamO piece has been moved to: " + move[0] + ", " + (move[1] + 1));
-                            iso.board.printBoard(iso.Computer, iso.Oppenent);
+                            iso.board.printBoard(iso.ComputerMovesMade, iso.OpponentMovesMade);
                             gettingMove = false;
                             isTeamXTurn = true;
                         }
