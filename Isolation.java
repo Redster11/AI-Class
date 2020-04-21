@@ -2,6 +2,7 @@ import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Random;
 
 class Board
 {
@@ -18,11 +19,20 @@ class Board
             Arrays.fill(this.board[i], '-'); 
         initialPlace();
     }
-    public char getItem(int x, int y)//current location of agent
+    public char getItem( int x,  int y)//current location of agent
     {
         return board[x][y];
     }
-    public boolean movePiece(int[] newLocation, char team) {
+
+    public Board copyBoard( Board toCopy){
+         Board toReturn = new Board(toCopy.n);
+        toReturn.board = toCopy.board;
+        toReturn.teamX = toCopy.teamX;
+        toReturn.teamO = toCopy.teamO;
+        return toReturn;
+    }
+
+    public boolean movePiece( Integer[] newLocation,  char team) {
         if (this.board[newLocation[0]][newLocation[1]] != '#')
         {
             if(team == 'O')
@@ -79,25 +89,38 @@ class Board
         this.board[teamO[0]][teamO[1]] = 'O'; // team O
         this.board[teamX[0]][teamX[1]] = 'X'; // team X
     }
-    public void printBoard(Moves Computer, Moves Opponent)
+    public void printBoard( boolean CompStarted,  Moves Computer,  Moves Opponent)
     {
         System.out.print("   1  2  3  4  5  6  7  8");
-        if(Computer.getMoves().isEmpty())
+        if(Computer.getMoves().isEmpty() && Opponent.getMoves().isEmpty())
             System.out.println();
-        else
+        else if (CompStarted)
             System.out.println("\tComputer  vs.  Opponent");
+        else
+            System.out.println("\tOpponent  vs.  Computer");
+            
         for (int j = 0; j < this.n; j++)
         {
-            int letter = j + 65;
+             int letter = j + 65;
             System.out.print((char)(letter));
             for(int i = 0; i < this.n; i++)
             {
                 System.out.print("  " + this.board[j][i]);
             }
-            if(!Computer.getMoves().isEmpty() && j < Computer.getMoves().size())
-                System.out.print("\t" + (j+1) + ". " + Computer.getMoves().get(j));
-            if(!Opponent.getMoves().isEmpty() && j < Opponent.getMoves().size())
-                System.out.print("\t\t  " + Opponent.getMoves().get(j));
+            if(CompStarted)
+            {
+                if(!Computer.getMoves().isEmpty() && j < Computer.getMoves().size())
+                    System.out.print("\t" + (j+1) + ". " + Computer.getMoves().get(j));
+                if(!Opponent.getMoves().isEmpty() && j < Opponent.getMoves().size())
+                    System.out.print("\t\t  " + Opponent.getMoves().get(j));
+            }
+            else
+            {
+                if(!Opponent.getMoves().isEmpty() && j < Opponent.getMoves().size())
+                    System.out.print("\t" + (j+1) + ". " + Opponent.getMoves().get(j));
+                if(!Computer.getMoves().isEmpty() && j < Computer.getMoves().size())
+                    System.out.print("\t\t  " + Computer.getMoves().get(j));
+            }
             System.out.println();
         }
     }
@@ -106,7 +129,7 @@ class Board
 class Moves
 {
     ArrayList<String> moves = new ArrayList<>();
-    void add(String move)
+    void add( String move)
     {
         moves.add(move);
 
@@ -124,7 +147,7 @@ class Agent
     Board board;
     Moves CompMovesMade;
     Moves OppennetMovesMade;
-    public Agent(boolean isTurn, Board boardToUse, Moves Computer, Moves Opponent)
+    public Agent( boolean isTurn,  Board boardToUse,  Moves Computer,  Moves Opponent)
     {
         this.isTurn = isTurn;
         this.board = boardToUse;
@@ -135,7 +158,7 @@ class Agent
     }
     public ArrayList<Integer[]> getAvalibleMoves()
     {
-        ArrayList<Integer[]> moveSet = new ArrayList<>();
+         ArrayList<Integer[]> moveSet = new ArrayList<>();
         int[] currentLoc;
         if(isTurn)
             currentLoc = this.board.teamX;
@@ -265,15 +288,15 @@ public class Isolation
     static Moves ComputerMovesMade = new Moves();
     static Moves OpponentMovesMade = new Moves();
 
-    public static int[] getCoordinates(String Move, Boolean isXTurn)// from form D4 to numbers so should be 3,4
+    public static Integer[] getCoordinates( String Move,  Boolean isXTurn)// from form D4 to numbers so should be 3,4
     {
-        int height = Move.toUpperCase().charAt(0);
-        int length = Integer.parseInt(String.valueOf(Move.charAt(1)));
+         int height = Move.toUpperCase().charAt(0);
+         int length = Integer.parseInt(String.valueOf(Move.charAt(1)));
         if (height < 65 || height > 72 || length > 8) // greater than H
         {
             // System.out.println("We failed because the values are: "+ height+", "+
             // length);
-            return new int[] { -1 };
+            return new Integer[] { -1 };
         } else {
             // System.out.println("Did not fail is valid number: " + height + ", " +
             // length);
@@ -282,37 +305,107 @@ public class Isolation
             else
                 OpponentMovesMade.add(Move);
 
-            return new int[] {height-65, length - 1 };
+            return new Integer[] {height-65, length - 1 };
         }
     }
 
-    public static void main(String[] args) 
+    public int[] MinMax( boolean turn,  Board b,  Isolation iso)//turn true = comp == max turn false = opponent == min
     {
-        Isolation iso = new Isolation();
-        Agent P = new Agent(true, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
-        iso.board.printBoard(iso.ComputerMovesMade, iso.OpponentMovesMade);
-        boolean isTeamXTurn = true;
-        Scanner kb = new Scanner(System.in);
+         Agent P = new Agent(turn, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
+         ArrayList<Integer[]> potentialMoves = P.movesToMake;
+         Random rand = new Random();
+         Integer[] bestMove = potentialMoves.get(0);
+         Board changedBoard1 = b.copyBoard(b);
+        changedBoard1.movePiece(bestMove, 'X');
+         Agent potentialOne = new Agent(true, changedBoard1, iso.ComputerMovesMade, iso.OpponentMovesMade);
+        for(int i = 1; i<potentialMoves.size();i++) // maximizing
+        {
+             Integer[] newLocation = potentialMoves.get(i);
+             Board changedBoard2 = b.copyBoard(b);
+            changedBoard2.movePiece(newLocation, 'X');
+             Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+            if(potentialOne.movesToMake.size() < potentialTwo.movesToMake.size())
+            {
+                MinMax(false, changedBoard2, iso);
+            }
+            else
+            {
+                MinMax(false, changedBoard1, iso);
+            }
+
+        }
+
+        for(int i = 1; i<potentialMoves.size();i++)//minimize
+        {
+             Integer[] newLocation = potentialMoves.get(i);
+             Board changedBoard2 = b.copyBoard(b);
+            changedBoard2.movePiece(newLocation, 'O');
+             Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+            if(potentialOne.movesToMake.size() >= potentialTwo.movesToMake.size())
+            {
+                MinMax(true, changedBoard2, iso);
+            }
+            else
+            {
+                MinMax(true, changedBoard1, iso);
+            }
+
+        }
+
+
+        return null;
+    }
+
+    public static void main( String[] args) 
+    {
+         Scanner kb = new Scanner(System.in);
+         Isolation iso = new Isolation();
+        boolean enteringFirst = true;
+        boolean isCompTurn = false;
+        boolean whoStarted = true;//true for comp false for opponent
+        while(enteringFirst)
+        {
+            System.out.println("Please enter who goes First (C or O)");
+             String first = kb.nextLine().toUpperCase();// person who goes first
+            if(first.startsWith("C"))
+            {
+                isCompTurn = true;
+                whoStarted = true;
+                enteringFirst = false;
+            }
+            else if (first.startsWith("O"))
+            {
+                isCompTurn = false;
+                whoStarted = false;
+                enteringFirst = false;
+            }
+            else
+            {
+                continue;
+            }
+        }
+         Agent P = new Agent(isCompTurn, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
+        iso.board.printBoard(whoStarted, iso.ComputerMovesMade, iso.OpponentMovesMade);
         
         for(int run = 0; run < 4; run++)
         {
             boolean gettingMove = true;
-            if (isTeamXTurn)// x is comp eventually
+            if (isCompTurn)// x is comp eventually
             {
-                int[] move = new int[2];
+                Integer[] move = new Integer[2];
                 while(gettingMove)
                 {
                     System.out.print("Player X Please enter your move: ");
-                    String XMove = kb.nextLine();
-                    move = getCoordinates(XMove, isTeamXTurn);
+                     String XMove = kb.nextLine();
+                    move = getCoordinates(XMove, isCompTurn);
                     if(move[0] != -1)
                     {
                         if (iso.board.movePiece(move, 'X'))
                         {
                             System.out.println("\nThe TeamX piece has been moved to: " + move[0] + ", " + (move[1] + 1));
-                            iso.board.printBoard(iso.ComputerMovesMade, iso.OpponentMovesMade);
+                            iso.board.printBoard(whoStarted, iso.ComputerMovesMade, iso.OpponentMovesMade);
                             gettingMove = false;
-                            isTeamXTurn = false;
+                            isCompTurn = false;
                         }
                     }
                     else
@@ -322,23 +415,23 @@ public class Isolation
                 }
                 
                 //Change them to a x y coordinate system
-                isTeamXTurn = false;
+                isCompTurn = false;
             }
             else
             {
-                int[] move = new int[2];
+                Integer[] move = new Integer[2];
                 while(gettingMove)
                 {
                     System.out.print("Player O Please enter your move: ");
-                    String OMove = kb.nextLine();
-                    move = getCoordinates(OMove, isTeamXTurn);
+                     String OMove = kb.nextLine();
+                    move = getCoordinates(OMove, isCompTurn);
                     if(move[0] != -1){
                         if (iso.board.movePiece(move, 'O'))
                         {
                             System.out.println("\nThe TeamO piece has been moved to: " + move[0] + ", " + (move[1] + 1));
-                            iso.board.printBoard(iso.ComputerMovesMade, iso.OpponentMovesMade);
+                            iso.board.printBoard(whoStarted, iso.ComputerMovesMade, iso.OpponentMovesMade);
                             gettingMove = false;
-                            isTeamXTurn = true;
+                            isCompTurn = true;
                         }
                     }
                     else
