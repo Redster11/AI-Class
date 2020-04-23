@@ -1,4 +1,3 @@
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -287,6 +286,7 @@ public class Isolation
     */
     static Moves ComputerMovesMade = new Moves();
     static Moves OpponentMovesMade = new Moves();
+    float maxTime = 20;
 
     public static Integer[] getCoordinates( String Move,  Boolean isXTurn)// from form D4 to numbers so should be 3,4
     {
@@ -309,64 +309,80 @@ public class Isolation
         }
     }
 
-    public int[] MinMax( boolean turn,  Board b,  Isolation iso)//turn true = comp == max turn false = opponent == min
+    public void MinMax(boolean turn, Board b, Isolation iso)//turn true = comp == max turn false = opponent == min
     {
-         Agent P = new Agent(turn, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
-         ArrayList<Integer[]> potentialMoves = P.movesToMake;
-         Random rand = new Random();
-         Integer[] bestMove = potentialMoves.get(0);
-         Board changedBoard1 = b.copyBoard(b);
-        changedBoard1.movePiece(bestMove, 'X');
-         Agent potentialOne = new Agent(true, changedBoard1, iso.ComputerMovesMade, iso.OpponentMovesMade);
-        for(int i = 1; i<potentialMoves.size();i++) // maximizing
+        Board changedBoard1 = b.copyBoard(b);
+        max(changedBoard1, iso, Integer.MIN_VALUE, Integer.MAX_VALUE, System.currentTimeMillis());
+        
+    }
+
+    public Integer min(Board b, Isolation iso, Integer alpha, Integer beta, float startTime)
+    {
+        int minVal = 0;
+        while(System.currentTimeMillis() - startTime < this.maxTime)
         {
-             Integer[] newLocation = potentialMoves.get(i);
-             Board changedBoard2 = b.copyBoard(b);
-            changedBoard2.movePiece(newLocation, 'X');
-             Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
-            if(potentialOne.movesToMake.size() < potentialTwo.movesToMake.size())
+            Agent minAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
+            if(minAgent.movesToMake.isEmpty())
             {
-                MinMax(false, changedBoard2, iso);
+                return Integer.MAX_VALUE;
             }
-            else
+            for(int i = 0; i < minAgent.movesToMake.size();i++) // minimizing
             {
-                MinMax(false, changedBoard1, iso);
+                Integer[] newLocation = minAgent.movesToMake.get(i);
+                Board changedBoard2 = b.copyBoard(b);
+                changedBoard2.movePiece(newLocation, 'O');
+                Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                minVal = Math.max(potentialTwo.movesToMake.size(), max(changedBoard2, iso, alpha, beta, startTime));
+                if(minVal <= alpha)
+                {
+                    return minVal;
+                }
+                beta = Math.min(beta, minVal);
             }
-
+            return minVal;
         }
+        return minVal;
+    }
 
-        for(int i = 1; i<potentialMoves.size();i++)//minimize
+    public Integer max(Board b, Isolation iso, Integer alpha, Integer beta, float startTime)
+    {
+        int maxVal = 0;
+        while(System.currentTimeMillis() - startTime < this.maxTime)
         {
-             Integer[] newLocation = potentialMoves.get(i);
-             Board changedBoard2 = b.copyBoard(b);
-            changedBoard2.movePiece(newLocation, 'O');
-             Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
-            if(potentialOne.movesToMake.size() >= potentialTwo.movesToMake.size())
+            Agent maxAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
+            if(maxAgent.movesToMake.isEmpty())
             {
-                MinMax(true, changedBoard2, iso);
+                return Integer.MIN_VALUE;
             }
-            else
+            for(int i = 0; i < maxAgent.movesToMake.size();i++) // maximizing
             {
-                MinMax(true, changedBoard1, iso);
+                Integer[] newLocation = maxAgent.movesToMake.get(i);
+                Board changedBoard2 = b.copyBoard(b);
+                changedBoard2.movePiece(newLocation, 'X');
+                Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                maxVal = Math.max(potentialTwo.movesToMake.size(), min(changedBoard2, iso, alpha, beta, startTime));
+                if(maxVal >= beta)
+                {
+                    return maxVal;
+                }
+                alpha = Math.max(alpha, maxVal);
             }
-
+            return maxVal;
         }
-
-
-        return null;
+        return maxVal;
     }
 
     public static void main( String[] args) 
     {
-         Scanner kb = new Scanner(System.in);
-         Isolation iso = new Isolation();
+        Scanner kb = new Scanner(System.in);
+        Isolation iso = new Isolation();
         boolean enteringFirst = true;
         boolean isCompTurn = false;
         boolean whoStarted = true;//true for comp false for opponent
         while(enteringFirst)
         {
             System.out.println("Please enter who goes First (C or O)");
-             String first = kb.nextLine().toUpperCase();// person who goes first
+            String first = kb.nextLine().toUpperCase();// person who goes first
             if(first.startsWith("C"))
             {
                 isCompTurn = true;
@@ -384,7 +400,9 @@ public class Isolation
                 continue;
             }
         }
-         Agent P = new Agent(isCompTurn, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
+        System.out.println("Please enter the amount of time the agent has to run in seconds");
+        iso.maxTime = kb.nextFloat();
+        Agent P = new Agent(isCompTurn, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
         iso.board.printBoard(whoStarted, iso.ComputerMovesMade, iso.OpponentMovesMade);
         
         for(int run = 0; run < 4; run++)
@@ -396,8 +414,10 @@ public class Isolation
                 while(gettingMove)
                 {
                     System.out.print("Player X Please enter your move: ");
-                     String XMove = kb.nextLine();
-                    move = getCoordinates(XMove, isCompTurn);
+
+                    // this is for player input
+                    //String XMove = kb.nextLine();
+                    //move = getCoordinates(XMove, isCompTurn);
                     if(move[0] != -1)
                     {
                         if (iso.board.movePiece(move, 'X'))
@@ -423,7 +443,7 @@ public class Isolation
                 while(gettingMove)
                 {
                     System.out.print("Player O Please enter your move: ");
-                     String OMove = kb.nextLine();
+                    String OMove = kb.nextLine();
                     move = getCoordinates(OMove, isCompTurn);
                     if(move[0] != -1){
                         if (iso.board.movePiece(move, 'O'))
