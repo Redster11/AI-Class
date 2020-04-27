@@ -7,9 +7,9 @@ TO DO LIST
 -need to check the agent directions (ex. up right) make sure its being added to potential moves
 -need to make sure heuristic is working
 -need to kill self
--
--need to make it so that the board that is being passed back is the previous board 
-    -current problem is that the board is staying as the updated board of the previous board making it not update properly.
+-need to figure out which is the best move
+    -need to figure out how to return that move
+-need to fix our turn (teamO)
 */
 class Board
 {
@@ -17,7 +17,23 @@ class Board
     char [][] board; // blocked spots
     Integer[] teamX = new Integer[2];
     Integer[] teamO = new Integer[2];
-    
+    public Board(int n, char[][] board, Integer[] teamX, Integer[] teamO)
+    {
+        this.n = n;
+        this.board = new char[n][n];
+        for(int i = 0; i < n; i++)
+        {
+            for(int j = 0; j < n; j++)
+            {
+                this.board[i][j] = board[i][j];
+            }
+        }
+        for(int i = 0; i < 2; i++)
+        {
+            this.teamO[i] = teamO[i];
+            this.teamX[i] = teamX[i];
+        }
+    }
     public Board(int n)
     {
         this.n = n;
@@ -31,16 +47,8 @@ class Board
         return board[x][y];
     }
 
-    public Board copyBoard( Board toCopy){
-        Board toReturn = new Board(toCopy.n);
-        toReturn.board = toCopy.board.clone();
-        toReturn.teamX = toCopy.teamX.clone();
-        toReturn.teamO = toCopy.teamO.clone();
-        return toReturn;
-    }
-
     public boolean movePiece( Integer[] newLocation,  char team) {
-        if (this.board[newLocation[0]][newLocation[1]] != '#')
+        if (this.board[newLocation[0]][newLocation[1]] != '#' )
         {
             if(team == 'O')
             {
@@ -136,14 +144,28 @@ class Board
 class Moves
 {
     ArrayList<String> moves = new ArrayList<>();
+    ArrayList<Integer[]> movesInt = new ArrayList<Integer[]>();
     void add( String move)
     {
         moves.add(move);
+        movesInt.add(getCoordinates(move));
 
     }
     ArrayList<String> getMoves()
     {
         return moves;
+    }
+    ArrayList<Integer[]> getMovesIntegers()
+    {
+        return movesInt;
+    }
+    public static Integer[] getCoordinates( String Move)// from form D4 to numbers so should be 3,4
+    {
+        int height = Move.toUpperCase().charAt(0);
+        int length = Integer.parseInt(String.valueOf(Move.charAt(1)));
+        // System.out.println("Did not fail is valid number: " + height + ", " +
+        // length);
+        return new Integer[] {height-65, length - 1 };
     }
 }
 
@@ -295,6 +317,7 @@ public class Isolation
     */
     static Moves ComputerMovesMade = new Moves();
     static Moves OpponentMovesMade = new Moves();
+    ArrayList<Board> Backtracking = new ArrayList<Board>();
     float maxTime = 20;
 
     public static Integer[] getCoordinates( String Move,  Boolean isXTurn)// from form D4 to numbers so should be 3,4
@@ -320,37 +343,43 @@ public class Isolation
 
     public Integer[] MinMax(boolean turn)//turn true = comp == max turn false = opponent == min
     {
+        Backtracking.clear();
         Isolation TestBoard = new Isolation();
-        Board changedBoard1 = this.board.copyBoard(this.board);
+        Board changedBoard1 = new Board(this.board.n, this.board.board, this.board.teamX, this.board.teamO);
+        Backtracking.add(changedBoard1);
         return max(changedBoard1, TestBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, System.currentTimeMillis());
         
     }
 
     public Integer[] min(Board b, Isolation iso, Integer alpha, Integer beta, float startTime)
     {
-        Integer[] minValInteger = new Integer[]{0,0,Integer.MAX_VALUE};
+        Integer[] minValInteger = new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
         Integer[] toReturnLoc = new Integer[3];//{loc1,loc2,minVal}
+        b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
         while(System.currentTimeMillis() - startTime < this.maxTime)
         {
-            Agent minAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
+            Agent minAgent = new Agent(false, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
             if(minAgent.movesToMake.isEmpty())//an error
             {
-                return new Integer[]{0,0,Integer.MAX_VALUE};
+                return new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
             }
             for(int i = 0; i < minAgent.movesToMake.size();i++) // minimizing
             {
                 Integer[] newLocation = minAgent.movesToMake.get(i);
-                Board changedBoard2 = b.copyBoard(b);
-                changedBoard2.movePiece(newLocation, 'O');
-                Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
-                Integer[] currentLoc = new Integer[]{potentialTwo.board.teamX[0], potentialTwo.board.teamX[1], potentialTwo.movesToMake.size()};
-                minValInteger = minInteger(currentLoc, max(changedBoard2, iso, alpha, beta, startTime));
-                if(minValInteger[2] <= alpha)
+                Board changedBoard2 = new Board(b.n, b.board, b.teamX, b.teamO);
+                changedBoard2.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                if(changedBoard2.movePiece(newLocation, 'O'))
                 {
-                    return minValInteger;
+                    Agent potentialTwo = new Agent(false, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                    Integer[] currentLoc = new Integer[]{potentialTwo.board.teamX[0], potentialTwo.board.teamX[1], potentialTwo.movesToMake.size()};
+                    minValInteger = minInteger(currentLoc, max(changedBoard2, iso, alpha, beta, startTime));
+                    if(minValInteger[2] <= alpha)
+                    {
+                        return minValInteger;
+                    }
+                    
+                    beta = Math.min(beta, minValInteger[2]);
                 }
-                
-                beta = Math.min(beta, minValInteger[2]);
             }
             return minValInteger;
         }
@@ -359,7 +388,7 @@ public class Isolation
 
     public Integer[] max(Board b, Isolation iso, Integer alpha, Integer beta, float startTime)
     {
-        Integer[] maxValInteger = new Integer[]{0,0,Integer.MIN_VALUE};
+        Integer[] maxValInteger = new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MIN_VALUE};
         Integer[] toReturnLoc = new Integer[3];//{loc1, loc2, maxVal}
         b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
         while(System.currentTimeMillis() - startTime < this.maxTime)
@@ -367,22 +396,25 @@ public class Isolation
             Agent maxAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
             if(maxAgent.movesToMake.isEmpty())
             {
-                return new Integer[]{0,0,Integer.MIN_VALUE};
+                return new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MIN_VALUE};
             }
             for(int i = 0; i < maxAgent.movesToMake.size();i++) // maximizing
             {
                 Integer[] newLocation = maxAgent.movesToMake.get(i);
-                Board changedBoard2 = b.copyBoard(b);
+                Board changedBoard2 = new Board(b.n, b.board, b.teamX, b.teamO);
                 b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
-                changedBoard2.movePiece(newLocation, 'X');
-                Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
-                Integer[] currentloc = new Integer[]{potentialTwo.board.teamX[0], potentialTwo.board.teamX[1], potentialTwo.movesToMake.size()};
-                maxValInteger = maxInteger(currentloc, min(changedBoard2, iso, alpha, beta, startTime));
-                if(maxValInteger[2] >= beta)
+                if(changedBoard2.movePiece(newLocation, 'X'))
                 {
-                    return maxValInteger;
+                    Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                    Integer[] currentloc = new Integer[]{potentialTwo.board.teamX[0], potentialTwo.board.teamX[1], potentialTwo.movesToMake.size()};
+                    maxValInteger = maxInteger(currentloc, min(changedBoard2, iso, alpha, beta, startTime));
+                    if(maxValInteger[2] >= beta)
+                    {
+                        
+                        return maxValInteger;
+                    }
+                    alpha = Math.max(alpha, maxValInteger[2]);
                 }
-                alpha = Math.max(alpha, maxValInteger[2]);
             }
             return maxValInteger;
         }
