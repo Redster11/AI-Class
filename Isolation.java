@@ -106,18 +106,22 @@ class Board
     }
     public void printBoard( boolean CompStarted,  Moves Computer,  Moves Opponent)
     {
-        System.out.print("   1  2  3  4  5  6  7  8");
+        System.out.println("    1  2  3  4  5  6  7  8");
+        System.out.print("    0  1  2  3  4  5  6  7");
         if(Computer.getMoves().isEmpty() && Opponent.getMoves().isEmpty())
             System.out.println();
         else if (CompStarted)
             System.out.println("\tComputer  vs.  Opponent");
         else
             System.out.println("\tOpponent  vs.  Computer");
-            
+        
+        int wasa = 0;
         for (int j = 0; j < this.n; j++)
         {
              int letter = j + 65;
             System.out.print((char)(letter));
+            System.out.print(wasa); 
+            wasa++;
             for(int i = 0; i < this.n; i++)
             {
                 System.out.print("  " + this.board[j][i]);
@@ -184,6 +188,14 @@ class Agent
         this.OppennetMovesMade = Opponent;
         movesToMake = getAvalibleMoves();
 
+    }
+    public void printMovesToMake()
+    {
+        for(int i = 0; i < this.movesToMake.size(); i++)
+        {
+            System.out.print("(" + this.movesToMake.get(i)[0] + ", " + this.movesToMake.get(i)[1] + ") ");
+        }
+        System.out.println();
     }
     public ArrayList<Integer[]> getAvalibleMoves()
     {
@@ -345,24 +357,30 @@ public class Isolation
     {
         Backtracking.clear();
         Isolation TestBoard = new Isolation();
+        int depth = 2;
         Board changedBoard1 = new Board(this.board.n, this.board.board, this.board.teamX, this.board.teamO);
         Backtracking.add(changedBoard1);
-        return max(changedBoard1, TestBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, System.currentTimeMillis());
-        
+        Integer[] maxlocation = max(changedBoard1, TestBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, System.currentTimeMillis(), depth);
+        if(maxlocation[0] == 7 && maxlocation[1] == 7)
+        {
+            System.out.println("The system has failed");
+        }
+        return maxlocation;
     }
 
-    public Integer[] min(Board b, Isolation iso, Integer alpha, Integer beta, float startTime)
+    public Integer[] min(Board b, Isolation iso, Integer alpha, Integer beta, float startTime, int depth)
     {
         Integer[] minValInteger = new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
         Integer[] toReturnLoc = new Integer[3];//{loc1,loc2,minVal}
         b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
-        while(System.currentTimeMillis() - startTime < this.maxTime)
+        while((System.currentTimeMillis() - startTime) < this.maxTime)
         {
             Agent minAgent = new Agent(false, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
             if(minAgent.movesToMake.isEmpty())//an error
             {
                 return new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
             }
+            //minAgent.printMovesToMake();
             for(int i = 0; i < minAgent.movesToMake.size();i++) // minimizing
             {
                 Integer[] newLocation = minAgent.movesToMake.get(i);
@@ -371,8 +389,10 @@ public class Isolation
                 if(changedBoard2.movePiece(newLocation, 'O'))
                 {
                     Agent potentialTwo = new Agent(false, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                    //potentialTwo.printMovesToMake();
                     Integer[] currentLoc = new Integer[]{potentialTwo.board.teamX[0], potentialTwo.board.teamX[1], potentialTwo.movesToMake.size()};
-                    minValInteger = minInteger(currentLoc, max(changedBoard2, iso, alpha, beta, startTime));
+                    if(depth > 1)
+                        minValInteger = minInteger(currentLoc, max(changedBoard2, iso, alpha, beta, startTime, depth-1));
                     if(minValInteger[2] <= alpha)
                     {
                         return minValInteger;
@@ -381,23 +401,25 @@ public class Isolation
                     beta = Math.min(beta, minValInteger[2]);
                 }
             }
+            
             return minValInteger;
         }
         return minValInteger;
     }
 
-    public Integer[] max(Board b, Isolation iso, Integer alpha, Integer beta, float startTime)
+    public Integer[] max(Board b, Isolation iso, Integer alpha, Integer beta, float startTime, int depth)
     {
         Integer[] maxValInteger = new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MIN_VALUE};
         Integer[] toReturnLoc = new Integer[3];//{loc1, loc2, maxVal}
         b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
-        while(System.currentTimeMillis() - startTime < this.maxTime)
+        while((System.currentTimeMillis() - startTime) < this.maxTime)
         {
             Agent maxAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
             if(maxAgent.movesToMake.isEmpty())
             {
                 return new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MIN_VALUE};
             }
+            //maxAgent.printMovesToMake();
             for(int i = 0; i < maxAgent.movesToMake.size();i++) // maximizing
             {
                 Integer[] newLocation = maxAgent.movesToMake.get(i);
@@ -406,8 +428,10 @@ public class Isolation
                 if(changedBoard2.movePiece(newLocation, 'X'))
                 {
                     Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                    //potentialTwo.printMovesToMake();
                     Integer[] currentloc = new Integer[]{potentialTwo.board.teamX[0], potentialTwo.board.teamX[1], potentialTwo.movesToMake.size()};
-                    maxValInteger = maxInteger(currentloc, min(changedBoard2, iso, alpha, beta, startTime));
+                    if(depth > 1)
+                        maxValInteger = maxInteger(currentloc, min(changedBoard2, iso, alpha, beta, startTime, depth));
                     if(maxValInteger[2] >= beta)
                     {
                         
@@ -473,6 +497,7 @@ public class Isolation
         }
         System.out.println("Please enter the amount of time the agent has to run in seconds");
         iso.maxTime = kb.nextFloat();
+        kb.nextLine();
         Agent P = new Agent(isCompTurn, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
         iso.board.printBoard(whoStarted, iso.ComputerMovesMade, iso.OpponentMovesMade);
         
@@ -517,7 +542,12 @@ public class Isolation
                 while(gettingMove)
                 {
                     System.out.print("Player O Please enter your move: ");
-                    String OMove = kb.nextLine();
+                    String OMove = "";
+                    OMove = kb.nextLine();
+                    if(OMove == "")
+                    {
+                        OMove = "H7";
+                    }
                     move = getCoordinates(OMove, isCompTurn);
                     if(move[0] != -1){
                         if (iso.board.movePiece(move, 'O'))
