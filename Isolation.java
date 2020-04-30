@@ -357,10 +357,22 @@ public class Isolation
     {
         Backtracking.clear();
         Isolation TestBoard = new Isolation();
-        int depth = 2;
+        int depth = 5;
         Board changedBoard1 = new Board(this.board.n, this.board.board, this.board.teamX, this.board.teamO);
         Backtracking.add(changedBoard1);
-        Integer[] maxlocation = max(changedBoard1, TestBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, System.currentTimeMillis(), depth);
+        Integer alpha = Integer.MIN_VALUE;
+        Agent MinMaxAgent = new Agent(turn, changedBoard1, TestBoard.ComputerMovesMade, TestBoard.OpponentMovesMade);
+        for(int i =0; i < MinMaxAgent.movesToMake.size(); i++)
+        {
+            Board changedBoard2 = new Board(this.board.n, changedBoard1.board, this.board.teamX, this.board.teamO);
+            changedBoard2.movePiece(MinMaxAgent.movesToMake.get(i), 'X');
+            Agent temp = new Agent(turn, changedBoard2, TestBoard.ComputerMovesMade, TestBoard.OpponentMovesMade);
+            if(temp.movesToMake.size() > alpha)
+            {
+                alpha = temp.movesToMake.size();
+            }
+        }
+        Integer[] maxlocation = max(changedBoard1, TestBoard, alpha, Integer.MAX_VALUE, System.currentTimeMillis(), depth);
         if(maxlocation[0] == 7 && maxlocation[1] == 7)
         {
             System.out.println("The system has failed");
@@ -372,7 +384,7 @@ public class Isolation
     {
         Integer[] minValInteger = new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
         Integer[] toReturnLoc = new Integer[3];//{loc1,loc2,minVal}
-        b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
+        //b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
         while((System.currentTimeMillis() - startTime) < this.maxTime)
         {
             Agent minAgent = new Agent(false, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
@@ -381,11 +393,12 @@ public class Isolation
                 return new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
             }
             //minAgent.printMovesToMake();
+
             for(int i = 0; i < minAgent.movesToMake.size();i++) // minimizing
             {
                 Integer[] newLocation = minAgent.movesToMake.get(i);
                 Board changedBoard2 = new Board(b.n, b.board, b.teamX, b.teamO);
-                changedBoard2.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                //changedBoard2.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
                 if(changedBoard2.movePiece(newLocation, 'O'))
                 {
                     Agent potentialTwo = new Agent(false, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
@@ -411,7 +424,7 @@ public class Isolation
     {
         Integer[] maxValInteger = new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MIN_VALUE};
         Integer[] toReturnLoc = new Integer[3];//{loc1, loc2, maxVal}
-        b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
+        //b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
         while((System.currentTimeMillis() - startTime) < this.maxTime)
         {
             Agent maxAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
@@ -424,7 +437,7 @@ public class Isolation
             {
                 Integer[] newLocation = maxAgent.movesToMake.get(i);
                 Board changedBoard2 = new Board(b.n, b.board, b.teamX, b.teamO);
-                b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
+                //b.printBoard(true, iso.ComputerMovesMade, iso.OpponentMovesMade);
                 if(changedBoard2.movePiece(newLocation, 'X'))
                 {
                     Agent potentialTwo = new Agent(true, changedBoard2, iso.ComputerMovesMade, iso.OpponentMovesMade);
@@ -501,7 +514,7 @@ public class Isolation
         Agent P = new Agent(isCompTurn, iso.board, iso.ComputerMovesMade, iso.OpponentMovesMade);
         iso.board.printBoard(whoStarted, iso.ComputerMovesMade, iso.OpponentMovesMade);
         
-        for(int run = 0; run < 4; run++)
+        for(int run = 0; run < 20; run++)
         {
             boolean gettingMove = true;
             if (isCompTurn)// x is comp eventually
