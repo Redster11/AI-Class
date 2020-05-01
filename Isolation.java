@@ -92,6 +92,10 @@ class Board
             }
         }
         else {
+            if(newLocation[0] == 0 && newLocation[1] == 0)
+            {
+                System.out.println("Team X wins!");
+            }
             System.out.println("Location already in use");
             return false;
         }
@@ -251,14 +255,17 @@ class Agent
             else
                 break;
         }
-        //check down left
-        int x = currentLoc[0]+1;
-        int y = currentLoc[1]-1;
+        //check down left 
+        int x = currentLoc[0]+1;//row down
+        int y = currentLoc[1]-1;//col left
         while(x < 8 && y >= 0)
         {
             if(this.board.getItem(x, y) == '-')
             {
-                moveSet.add(new Integer[]{x,y});           
+                /*if(this.board.getItem(x-1, y) != '-' && this.board.getItem(x, y+1) != '-')
+                    break;
+                else*/
+                    moveSet.add(new Integer[]{x,y});           
             }
             else    
                 break;
@@ -266,13 +273,16 @@ class Agent
             y--;
         }
         //check up left
-        x = currentLoc[0]-1;
-        y = currentLoc[1]-1;
+        x = currentLoc[0]-1;//up
+        y = currentLoc[1]-1;//left
         while(x > 0 && y >= 0)
         {
             if(this.board.getItem(x, y) == '-')
             {
-                moveSet.add(new Integer[]{x,y});           
+                /*if(this.board.getItem(x+1, y) != '-' && this.board.getItem(x, y+1) != '-')
+                    break;
+                else*/
+                    moveSet.add(new Integer[]{x,y});           
             }
             else    
                 break;
@@ -281,13 +291,16 @@ class Agent
         }
 
         //check down right
-        x = currentLoc[0]+1;
-        y = currentLoc[1]+1;
+        x = currentLoc[0]+1;//down
+        y = currentLoc[1]+1;//right
         while( x < 8 && y < 8)
         {
             if(this.board.getItem(x, y) == '-')
             {
-                moveSet.add(new Integer[]{x,y});
+                /*if(this.board.getItem(x-1, y) != '-' && this.board.getItem(x, y-1) != '-')
+                    break;
+                else*/
+                    moveSet.add(new Integer[]{x,y});
             }
             else 
                 break;
@@ -296,13 +309,16 @@ class Agent
         }
 
         //check up right
-        x = currentLoc[0]-1;
-        y = currentLoc[1]+1;
+        x = currentLoc[0]-1;//up
+        y = currentLoc[1]+1;//right
         while( x >= 0 && y < 8)
         {
             if(this.board.getItem(x, y) == '-')
             {
-                moveSet.add(new Integer[]{x,y});
+                /*if(this.board.getItem(x+1, y) != '-' && this.board.getItem(x, y-1) != '-')
+                    break;
+                else*/
+                    moveSet.add(new Integer[]{x,y});
             }
             else 
                 break;
@@ -390,7 +406,7 @@ public class Isolation
             Agent minAgent = new Agent(false, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
             if(minAgent.movesToMake.isEmpty())//an error
             {
-                return new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MAX_VALUE};
+                return new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MAX_VALUE};
             }
             //minAgent.printMovesToMake();
 
@@ -430,7 +446,7 @@ public class Isolation
             Agent maxAgent = new Agent(true, b, iso.ComputerMovesMade, iso.OpponentMovesMade);
             if(maxAgent.movesToMake.isEmpty())
             {
-                return new Integer[]{iso.board.teamX[0],iso.board.teamX[1],Integer.MIN_VALUE};
+                return new Integer[]{iso.board.teamO[0],iso.board.teamO[1],Integer.MIN_VALUE};
             }
             //maxAgent.printMovesToMake();
             for(int i = 0; i < maxAgent.movesToMake.size();i++) // maximizing
